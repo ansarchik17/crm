@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 
 from voicecrm.config import Settings
 from voicecrm.main import create_app
-from voicecrm.realtime import MAX_SDP_BYTES, RealtimeError, RealtimeGateway, session_config
+from voicecrm.dialogue.realtime import MAX_SDP_BYTES, RealtimeError, RealtimeGateway, session_config
 
 SDP = "v=0\r\nm=audio 9 UDP/TLS/RTP/SAVPF 111\r\n"
 

@@ -1,13 +1,21 @@
 # Контекст VoiceCRM для продолжения в новом чате
 
-Обновлено: 28 сентября 2026. Это рабочее резюме беседы, а не дословная стенограмма.
+Обновлено: 3 октября 2026. Это рабочее резюме беседы, а не дословная стенограмма.
 Проект: `/Users/ansar.keles/CRM`. Общение с пользователем — на русском, простыми словами.
 
 ## Цель и текущее состояние
 
-Последнее изменение: пользователь попросил проверить OpenAI Realtime speech-to-speech.
+Последнее изменение 3 октября 2026: проект переведён в Git (первый коммит — исходный
+прототип) и переструктурирован под целевую архитектуру. Код диалога перенесён в
+`src/voicecrm/dialogue` (`llm.py`, `stt.py`, `prompt.py`, `sessions.py`, `realtime.py`,
+`router.py`), общий `errors.py`; созданы пакеты `telephony`, `crm`, `analytics` только с
+описанием ответственности, реализации в них нет. Поведение HTTP API не менялось,
+46 Python- и 8 Node-тестов проходят, сервер проверен на реальном `.env`.
+План реализации заказа: `docs/ROADMAP.md`. Ключ OpenAI по-прежнему отсутствует.
+
+Предыдущее изменение: пользователь попросил проверить OpenAI Realtime speech-to-speech.
 Добавлены `/realtime`, `/realtime/config`, POST `/realtime/calls`, адаптер
-`src/voicecrm/realtime.py` и браузерный WebRTC-клиент. Старый Alem-режим остаётся `/`.
+`src/voicecrm/dialogue/realtime.py` и браузерный WebRTC-клиент. Старый Alem-режим остаётся `/`.
 Настройки: OPENAI_API_KEY (отсутствует при последней проверке), модель
 gpt-realtime-2.1, голос marin, reasoning minimal. Ключ только серверный, SDP
 обменивается через backend, аудио напрямую с OpenAI. Использован актуальный GA
@@ -100,9 +108,10 @@ HTTP 200, content=null, finish_reason=length. Не сохраняли текст
 ## Где искать код и результаты
 
 - `src/voicecrm/config.py`: конфигурация из .env.
-- `src/voicecrm/providers.py`: системный промпт и адаптер Qwen.
-- `src/voicecrm/speech.py`: адаптер STT и проверка WAV.
-- `src/voicecrm/main.py`: API и сессии в памяти.
+- `src/voicecrm/dialogue/prompt.py` и `llm.py`: системный промпт и адаптер Qwen.
+- `src/voicecrm/dialogue/stt.py`: адаптер STT и проверка WAV.
+- `src/voicecrm/dialogue/router.py` и `sessions.py`: API и сессии в памяти.
+- `src/voicecrm/main.py`: сборка приложения, страницы, `/health`.
 - `scripts/benchmark_qwen.py`: ручной живой benchmark, 9 запросов; может тарифицироваться.
   Сохраняет и перезаписывает `recordings/qwen_benchmark_uncached.json`.
 - `recordings/CRM_test_result.json`: первый успешный тест.
@@ -122,7 +131,7 @@ HTTP 200, content=null, finish_reason=length. Не сохраняли текст
 
 ## Продолжение: тестовая стоматология
 
-Пользователь выбрал стоматологию для теста. В `providers.py` настроен системный
+Пользователь выбрал стоматологию для теста. В `dialogue/prompt.py` настроен системный
 промпт администратора: учебные направления, уточнение услуги/дня/времени,
 изменение пожеланий, запрет вымышленных цен и подтверждений записи.
 Реальных данных клиники пока нет; направления — тестовые примеры.

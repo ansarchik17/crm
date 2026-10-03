@@ -8,7 +8,8 @@ from pydantic import ValidationError
 
 from voicecrm.config import Settings
 from voicecrm.main import create_app
-from voicecrm.providers import ProviderError, QwenModel
+from voicecrm.dialogue.llm import QwenModel
+from voicecrm.errors import ProviderError
 
 
 def settings(**kwargs):

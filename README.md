@@ -8,6 +8,21 @@
 Телефония, серверный TTS, CRM,
 база знаний и аналитика ещё не реализованы. Название папки CRM не означает,
 что здесь уже есть готовая CRM. Полный разбор: [docs/PROJECT.md](docs/PROJECT.md).
+План реализации заказа по этапам: [docs/ROADMAP.md](docs/ROADMAP.md).
+
+## Структура
+
+```text
+src/voicecrm/
+  main.py        сборка приложения, тестовые страницы, /health
+  config.py      настройки из .env
+  errors.py      ProviderError без деталей провайдера
+  dialogue/      STT (stt.py), Qwen (llm.py), промпт, сессии, OpenAI Realtime, HTTP-маршруты
+  telephony/     Asterisk, SIP, внутренние номера, очереди — не начато
+  crm/           интеграция с CRM — не начато
+  analytics/     записи и AI-анализ — не начато
+  static/        страницы / и /realtime
+```
 
 Настройка Alem Qwen и распознавание WAV: [docs/ALEM.md](docs/ALEM.md).
 Адаптеры проверены с подменой HTTP и с реальными API Alem на локальных ключах.

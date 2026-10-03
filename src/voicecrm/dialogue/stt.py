@@ -8,7 +8,7 @@ from typing import Protocol
 import httpx
 
 from voicecrm.config import Settings
-from voicecrm.providers import ProviderError
+from voicecrm.errors import ProviderError
 
 MAX_AUDIO_BYTES = 4 * 1024 * 1024
 MAX_AUDIO_SECONDS = 30

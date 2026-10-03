@@ -11,8 +11,8 @@ from pydantic import ValidationError
 
 from voicecrm.config import Settings
 from voicecrm.main import create_app
-from voicecrm.providers import ProviderError
-from voicecrm.speech import AlemSpeechRecognizer, MAX_AUDIO_BYTES, validate_wav
+from voicecrm.errors import ProviderError
+from voicecrm.dialogue.stt import AlemSpeechRecognizer, MAX_AUDIO_BYTES, validate_wav
 
 
 def wav_data(seconds=1, channels=1):

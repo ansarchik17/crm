@@ -6,7 +6,7 @@ import json
 import httpx
 
 from voicecrm.config import Settings
-from voicecrm.providers import SYSTEM_PROMPT
+from voicecrm.dialogue.prompt import SYSTEM_PROMPT
 
 MAX_SDP_BYTES = 64 * 1024
 

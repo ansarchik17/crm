@@ -11,7 +11,7 @@ from uuid import uuid4
 import httpx
 
 from voicecrm.config import Settings
-from voicecrm.providers import SYSTEM_PROMPT
+from voicecrm.dialogue.prompt import SYSTEM_PROMPT
 
 
 async def main():
