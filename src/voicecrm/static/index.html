@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>VoiceCRM · Тестовая стоматология</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <script type="module" src="/static/app.js"></script>
+</head>
+<body>
+  <main>
+    <header><span class="brand">VOICECRM <span class="badge">ТЕСТ</span></span><span id="connection">Подключение…</span></header>
+    <section class="intro"><p class="eyebrow">ГОЛОСОВОЙ АДМИНИСТРАТОР</p>
+      <h1>Начнём с улыбки.</h1>
+      <p>Тестовая стоматология. Расскажите, какая услуга вам нужна и когда удобно прийти.</p>
+      <a href="/realtime">Попробовать OpenAI Realtime — голос → голос →</a>
+    </section>
+    <section class="workspace" aria-label="Диалог со стоматологией">
+      <div class="toolbar"><strong>Ваш разговор</strong><button id="reset" class="secondary" disabled>Новый диалог</button></div>
+      <div id="messages" role="log" aria-label="Переписка" aria-live="polite"><p id="empty">Например: «Хочу на чистку завтра после трёх».</p></div>
+      <p id="status" role="status">Подключаемся к помощнику…</p>
+      <form id="form">
+        <label class="sr-only" for="text">Ваше сообщение</label>
+        <textarea id="text" rows="2" maxlength="2000" placeholder="Напишите или запишите сообщение…" disabled></textarea>
+        <div class="actions"><button id="record" type="button" disabled>● Говорить</button><button id="send" type="submit" disabled>Отправить →</button></div>
+      </form>
+      <div class="options">
+        <label><input type="checkbox" id="speak" checked> Озвучивать ответы</label>
+        <label class="sr-only" for="voice">Голос</label><select id="voice" aria-label="Голос"></select>
+        <button id="stop" class="secondary" type="button">Остановить голос</button>
+        <span id="voice-status" role="status"></span>
+        <label class="file">Загрузить WAV<input id="file" type="file" accept=".wav,audio/wav" disabled></label>
+      </div>
+    </section>
+    <footer>Учебный сценарий: запись на приём не создаётся, цены и расписание не подключены.
+      Аудио и сообщения обрабатываются Alem. Используйте вымышленные обращения.
+      Озвучивание — голосом браузера; доступные голоса зависят от устройства.
+      Голоса с пометкой «онлайн» могут передавать текст сервису озвучивания.</footer>
+  </main>
+</body>
+</html>

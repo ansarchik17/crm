@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>VoiceCRM · OpenAI Realtime</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/static/realtime.css">
+  <script type="module" src="/static/realtime.js"></script>
+</head>
+<body>
+  <main>
+    <header><span class="brand">VOICECRM <span class="badge">REALTIME</span></span><a href="/">Сравнить с Alem →</a></header>
+    <section class="intro"><p class="eyebrow">ТЕСТОВАЯ СТОМАТОЛОГИЯ · OPENAI</p>
+      <h1>Просто начните говорить.</h1>
+      <p>Помощник слышит вашу речь и отвечает голосом. Делайте паузы между репликами; его можно перебить.</p>
+    </section>
+    <section class="workspace" aria-label="Разговор с OpenAI Realtime">
+      <div class="toolbar"><strong>Голос → голос</strong><span id="connection">Проверяем настройки…</span></div>
+      <div class="rt-controls">
+        <button id="start" disabled>Начать разговор</button>
+        <button id="end" class="secondary" disabled>Завершить</button>
+        <button id="mute" class="secondary" disabled>Выключить микрофон</button>
+        <span id="timer"></span>
+      </div>
+      <p id="status" role="status">Загрузка…</p>
+      <div id="setup" class="setup" hidden>
+        <p>Нужен ключ OpenAI API в локальном <code>.env</code>: <code>OPENAI_API_KEY</code>.
+        После добавления перезапустите сервер и обновите настройки. Ключ не вводится на этой странице.</p>
+        <button id="refresh" class="secondary">Проверить настройки</button>
+      </div>
+      <div class="audio-panel"><audio id="remote-audio" autoplay controls aria-label="Голос OpenAI"></audio>
+        <button id="play" class="secondary" hidden>Включить звук</button></div>
+      <div class="rt-metrics"><span id="latency">Отклик сервиса: —</span><span id="usage">Расход токенов: —</span></div>
+      <div id="messages" role="log" aria-label="Переписка" aria-live="polite"><p id="empty">Например: «Хочу записаться на чистку в пятницу после трёх».</p></div>
+      <p class="rt-note">Отклик сервиса измеряется от обнаружения конца реплики до начала выдачи аудио.
+        Пауза определения конца речи (0,5 с) и задержка воспроизведения не включены.
+        Текст может появиться позже голоса; прерванный ответ мог прозвучать не полностью.</p>
+    </section>
+    <footer>Вы разговариваете с ИИ. Микрофон передаётся напрямую OpenAI только во время подключения.
+      Это платный тест API, каждый разговор автоматически завершается через 5 минут.
+      Используйте вымышленные обращения. Настоящая запись на приём не создаётся.
+      Расшифровка нужна только для экрана — модель отвечает непосредственно на аудио.
+      Для проверки перебиваний рекомендуются наушники.</footer>
+  </main>
+</body>
+</html>
