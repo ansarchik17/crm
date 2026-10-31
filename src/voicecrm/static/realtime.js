@@ -32,9 +32,7 @@ async function refresh() {
 }
 function stop(text = 'Разговор завершён. Микрофон выключен.', error = false) {
   const call = current;
-  if (call) {
-    for (const [id, item] of call.events.items) if (item.partial && item.role === 'assistant') call.events.interrupt(id);
-  }
+  call?.events.stop();
   current = null;
   if (call) {
     clearTimeout(call.setupTimer); clearInterval(call.durationTimer);

@@ -73,6 +73,18 @@ export class RealtimeEvents {
     }
     if (!id || this.activeResponse === id) this.activeResponse = null;
   }
+  stop() {
+    // Generation may be completed while its audio is still playing or queued.
+    // Keep only answers whose playback has actually finished.
+    for (const [id, response] of this.responses) {
+      if (!response.playbackStopped) this.finishPlayback(id, true);
+    }
+    this.finishPlayback(null, true);
+    for (const [id, item] of this.items) {
+      if (item.role === 'assistant' && item.partial && !this.inactiveItems.has(id)) this.interrupt(id);
+    }
+    this.pendingEnd = null;
+  }
   handle(event) {
     switch (event.type) {
       case 'session.created':
