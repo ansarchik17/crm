@@ -3,6 +3,7 @@ import {encodeWav} from './wav.js';
 const el = id => document.getElementById(id);
 const synth = window.speechSynthesis;
 let session = null, busy = false, recording = null, sttEnabled = false, voices = [];
+let pendingRecording = null;
 let utterance = null, speechTiming = null, latestTiming = null;
 let callback = null, callbackEnabled = false, callbackEdited = false;
 let callbackContacts = [];
@@ -275,39 +276,60 @@ async function transcribe(blob) {
   el('text').value = data.text;
   await send(data.text, timing);
 }
+function releaseRecording(current) {
+  if (!current) return Promise.resolve();
+  clearTimeout(current.timer); current.timer = null;
+  current.stream?.getTracks().forEach(track => track.stop()); current.stream = null;
+  if (current.node) current.node.port.onmessage = null;
+  for (const key of ['source', 'node', 'silent']) {
+    current[key]?.disconnect(); current[key] = null;
+  }
+  if (current.context && !current.closing) {
+    current.closing = current.context.state === 'closed' ? Promise.resolve() : current.context.close().catch(() => {});
+  }
+  return current.closing || Promise.resolve();
+}
 async function startRecording() {
+  if (busy || recording || pendingRecording) return;
+  const current = {stream: null, context: null, node: null, source: null, silent: null, chunks: [], timer: null};
+  pendingRecording = current;
   stopSpeech(); busy = true; controls();
-  let stream, context;
   try {
-    stream = await navigator.mediaDevices.getUserMedia({audio: {channelCount: 1, echoCancellation: true}});
-    context = new AudioContext({sampleRate: 24000});
+    current.stream = await navigator.mediaDevices.getUserMedia({audio: {channelCount: 1, echoCancellation: true}});
+    if (pendingRecording !== current) return;
+    const context = current.context = new AudioContext({sampleRate: 24000});
     await context.resume();
+    if (pendingRecording !== current) return;
     if (context.sampleRate !== 24000) throw new Error('Браузер не поддерживает запись 24 кГц. Используйте WAV-файл.');
     await context.audioWorklet.addModule('/static/recorder.js');
-    const source = context.createMediaStreamSource(stream);
-    const node = new AudioWorkletNode(context, 'pcm-recorder');
-    const silent = context.createGain(); silent.gain.value = 0;
-    const chunks = [];
-    const current = {stream, context, node, source, silent, chunks, timer: null};
-    recording = current;
+    if (pendingRecording !== current) return;
+    const source = current.source = context.createMediaStreamSource(current.stream);
+    const node = current.node = new AudioWorkletNode(context, 'pcm-recorder');
+    const silent = current.silent = context.createGain(); silent.gain.value = 0;
+    recording = current; pendingRecording = null;
     node.port.onmessage = async ({data}) => {
-      if (data.samples) chunks.push(data.samples);
-      if (!data.done || recording !== current) return;
-      clearTimeout(current.timer); recording = null;
-      stream.getTracks().forEach(t => t.stop()); source.disconnect(); node.disconnect(); silent.disconnect();
-      await context.close(); busy = false;
-      await run(async () => transcribe(encodeWav(chunks, 24000)));
+      if (recording !== current) return;
+      if (data.samples) current.chunks.push(data.samples);
+      if (!data.done) return;
+      recording = null; pendingRecording = current;
+      await releaseRecording(current);
+      if (pendingRecording !== current) return;
+      pendingRecording = null; busy = false;
+      await run(async () => transcribe(encodeWav(current.chunks, 24000)));
     };
     source.connect(node); node.connect(silent); silent.connect(context.destination);
     current.timer = setTimeout(() => node.port.postMessage('stop'), 29000);
     status('Слушаю… Нажмите «Закончить запись». Максимум 29 секунд.');
+    controls();
   } catch (error) {
-    stream?.getTracks().forEach(t => t.stop());
-    if (context && context.state !== 'closed') await context.close();
-    recording = null; busy = false;
-    status(error.name === 'NotAllowedError' ? 'Разрешите доступ к микрофону или напишите сообщение.' : error.message, true);
+    if (pendingRecording === current || recording === current) {
+      pendingRecording = null; recording = null; busy = false;
+      status(error.name === 'NotAllowedError' ? 'Разрешите доступ к микрофону или напишите сообщение.' : error.message, true);
+      controls();
+    }
+  } finally {
+    if (recording !== current) await releaseRecording(current);
   }
-  controls();
 }
 el('form').onsubmit = event => { event.preventDefault(); const text = el('text').value.trim(); if (text) run(() => send(text)); };
 el('reset').onclick = () => run(newSession);
@@ -348,7 +370,10 @@ for (const id of ['callback-phone', 'callback-summary']) {
 el('callback-contact').onchange = () => { callbackEdited = true; controls(); };
 window.addEventListener('pagehide', () => {
   stopSpeech();
-  if (recording) { clearTimeout(recording.timer); recording.stream.getTracks().forEach(t => t.stop()); recording.context.close(); }
+  const pending = pendingRecording, active = recording;
+  pendingRecording = null; recording = null;
+  releaseRecording(pending); releaseRecording(active);
+  if (pending || active) { busy = false; controls(); }
   if (session) fetch(`/sessions/${session}`, {method: 'DELETE', keepalive: true}).catch(() => {});
 });
 loadVoices(); if (synth) synth.addEventListener('voiceschanged', loadVoices);
