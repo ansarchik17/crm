@@ -99,6 +99,60 @@ def message(client, sid, text, **extra):
     return client.post(f"/sessions/{sid}/messages", json={"text": text, **extra})
 
 
+@pytest.mark.parametrize("turns", [19, 20])
+@pytest.mark.parametrize("command,status,writes", [
+    ("Подтверждаю заявку!", "succeeded", 1),
+    ("Отменяю заявку", "canceled", 0),
+    ("Отменить заявку", "canceled", 0),
+    ("Проверить результат", "draft", 0),
+])
+def test_callback_controls_remain_available_at_turn_limit(tmp_path, monkeypatch, turns, command, status, writes):
+    from uuid import UUID
+
+    store = SessionStore()
+    monkeypatch.setattr("voicecrm.main.SessionStore", lambda **kwargs: store)
+    app, crm, model = app_with_callbacks(tmp_path)
+    with TestClient(app) as client:
+        sid = session(client)
+        for _ in range(turns):
+            assert message(client, sid, "Тестовое обращение").status_code == 200
+        draft = prepare(client, {**DRAFT, "session_id": sid})
+        if turns == 20:
+            assert message(client, sid, "Лучше вечером").status_code == 409
+            assert client.get(f"/crm/callbacks/{draft['id']}").json()["callback"]["status"] == "draft"
+        for _ in range(3):
+            response = message(client, sid, command, callback_id=draft["id"])
+            assert response.status_code == 200
+            assert response.json()["callback"]["status"] == status
+        assert len(crm.writes) == writes
+        assert len(model.calls) == turns
+        state = store.get(UUID(sid))
+        assert len(state.messages) == 40
+        assert state.callback_history_start <= len(state.messages)
+        assert message(client, sid, "Продолжим диалог").status_code == 409
+
+
+def test_unconfirmed_callback_can_be_reconciled_after_turn_limit_without_reposting(tmp_path):
+    crm = FakeCRM()
+    crm.write_error = "write_unconfirmed"
+    crm.save_before_error = True
+    app, _, model = app_with_callbacks(tmp_path, crm=crm)
+    with TestClient(app) as client:
+        sid = session(client)
+        for _ in range(20):
+            assert message(client, sid, "Тестовое обращение").status_code == 200
+        draft = prepare(client, {**DRAFT, "session_id": sid})
+        initial = client.post(f"/crm/callbacks/{draft['id']}/confirm", json={})
+        assert initial.json()["callback"]["status"] == "unconfirmed"
+        for command in ("Проверить результат", "Подтверждаю заявку"):
+            response = message(client, sid, command, callback_id=draft["id"])
+            assert response.status_code == 200
+            assert response.json()["callback"]["status"] == "succeeded"
+            assert response.json()["callback"]["task_id"] == "task1"
+        assert len(crm.writes) == 1
+        assert len(model.calls) == 20
+
+
 def test_direct_callback_requires_explicit_confirmation_and_repeats_are_idempotent(tmp_path):
     crm = FakeCRM([ContactSummary(id="contact1", name="Тестовый клиент")])
     app, _, _ = app_with_callbacks(tmp_path, crm=crm)

@@ -119,7 +119,12 @@ def build_router(settings: Settings, sessions: SessionStore) -> APIRouter:
         if session.lock.locked():
             raise HTTPException(409, "A reply is already being generated")
         async with session.lock:
-            if len(session.messages) >= MAX_MESSAGES:
+            command = turn.text.casefold().strip().rstrip(".! ")
+            control_command = command in ("подтверждаю заявку", "отменяю заявку", "отменить заявку", "проверить результат")
+            keep_turn = len(session.messages) < MAX_MESSAGES
+            # The model's context limit must not block explicit CRM controls.
+            # Once full, serve them without growing the bounded history.
+            if not keep_turn and not control_command:
                 raise HTTPException(409, "Session turn limit reached; start a new session")
             messages = [*session.messages, {"role": "user", "content": turn.text}]
             started = perf_counter()
@@ -133,7 +138,6 @@ def build_router(settings: Settings, sessions: SessionStore) -> APIRouter:
                     # A stale browser ID must not poison the rest of the session.
                     callback = await service.get(str(turn.callback_id))
                     session.callback_id = callback.id
-                command = turn.text.casefold().strip().rstrip(".! ")
                 if service is not None and session.callback_id and callback is None:
                     callback = await service.get(session.callback_id)
                 if callback is not None:
@@ -146,7 +150,7 @@ def build_router(settings: Settings, sessions: SessionStore) -> APIRouter:
                         session.callback_context = None
                         session.callback_history_start = len(session.messages)
                         session.callback_terminal_id = callback.id
-                if command in ("подтверждаю заявку", "отменяю заявку", "отменить заявку", "проверить результат"):
+                if control_command:
                     if callback is None:
                         answer = "Сначала подготовьте обращение на обратный звонок и проверьте данные."
                     else:
@@ -157,8 +161,8 @@ def build_router(settings: Settings, sessions: SessionStore) -> APIRouter:
                             callback is not None and callback.status in ("canceled", "succeeded", "failed")
                             and session.callback_terminal_id != callback.id):
                         session.callback_context = None
-                        # This turn's reply is appended below; new requests start after it.
-                        session.callback_history_start = len(messages) + 1
+                        # Include this reply only if there is room to retain it.
+                        session.callback_history_start = len(messages) + 1 if keep_turn else len(session.messages)
                         session.callback_terminal_id = callback.id if callback is not None else None
                 elif callback is not None and callback.status in ("dispatching", "unconfirmed"):
                     answer = callback_text(callback)
@@ -238,7 +242,8 @@ def build_router(settings: Settings, sessions: SessionStore) -> APIRouter:
             finally:
                 # Idle time starts when in-flight work releases the session.
                 sessions.get(session_id)
-            session.messages = [*messages, {"role": "assistant", "content": answer}]
+            if keep_turn:
+                session.messages = [*messages, {"role": "assistant", "content": answer}]
             return {"session_id": session_id, "text": answer, "mode": settings.llm_mode,
                     "latency_ms": round((perf_counter() - started) * 1000),
                     "callback": callback_public(callback) if callback is not None else None,
