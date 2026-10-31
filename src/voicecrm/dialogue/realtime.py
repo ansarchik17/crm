@@ -31,7 +31,8 @@ def session_config(settings: Settings) -> dict:
             "input": {
                 "noise_reduction": {"type": "near_field"},
                 "turn_detection": {"type": "server_vad", "threshold": 0.5,
-                                   "prefix_padding_ms": 300, "silence_duration_ms": 500,
+                                   "prefix_padding_ms": 300,
+                                   "silence_duration_ms": settings.openai_realtime_silence_ms,
                                    "create_response": True, "interrupt_response": True},
                 # Only for on-screen captions; the voice model consumes audio directly.
                 "transcription": {"model": "gpt-transcribe", "language": "ru"},

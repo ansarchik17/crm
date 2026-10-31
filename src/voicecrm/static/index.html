@@ -14,10 +14,35 @@
       <h1>Начнём с улыбки.</h1>
       <p>Тестовая стоматология. Расскажите, какая услуга вам нужна и когда удобно прийти.</p>
       <a href="/realtime">Попробовать OpenAI Realtime — голос → голос →</a>
+      <a href="/">Открыть EspoCRM →</a>
     </section>
     <section class="workspace" aria-label="Диалог со стоматологией">
       <div class="toolbar"><strong>Ваш разговор</strong><button id="reset" class="secondary" disabled>Новый диалог</button></div>
       <div id="messages" role="log" aria-label="Переписка" aria-live="polite"><p id="empty">Например: «Хочу на чистку завтра после трёх».</p></div>
+      <details id="callback-request" hidden>
+        <summary>Попросить обратный звонок</summary>
+        <form id="callback-form">
+          <label for="callback-phone">Телефон с кодом страны</label>
+          <input id="callback-phone" type="tel" maxlength="64" placeholder="+7…" required>
+          <label for="callback-summary">О чём нужно перезвонить</label>
+          <textarea id="callback-summary" maxlength="2000" rows="2" required></textarea>
+          <label id="callback-contact-label" for="callback-contact" hidden>Уточните клиента</label>
+          <select id="callback-contact" aria-describedby="callback-contact-hint" hidden></select>
+          <p id="callback-contact-hint" hidden>Выберите клиента из списка, затем проверьте обращение. Это ещё не отправка задачи.</p>
+          <button id="callback-prepare" type="submit">Проверить обращение</button>
+        </form>
+      </details>
+      <section id="callback-card" class="callback-card" aria-label="Обращение на обратный звонок" aria-live="polite" hidden>
+        <strong id="callback-status"></strong>
+        <p id="callback-details"></p>
+        <p id="callback-contact-name"></p>
+        <p id="callback-receipt"></p>
+        <div class="actions">
+          <button id="callback-confirm" type="button" hidden>Подтвердить заявку</button>
+          <button id="callback-cancel" class="secondary" type="button" hidden>Отменить заявку</button>
+          <button id="callback-reconcile" class="secondary" type="button" hidden>Проверить результат</button>
+        </div>
+      </section>
       <p id="status" role="status">Подключаемся к помощнику…</p>
       <form id="form">
         <label class="sr-only" for="text">Ваше сообщение</label>
@@ -29,12 +54,15 @@
         <label class="sr-only" for="voice">Голос</label><select id="voice" aria-label="Голос"></select>
         <button id="stop" class="secondary" type="button">Остановить голос</button>
         <span id="voice-status" role="status"></span>
+        <span id="latency" role="status">От отправки реплики до начала голоса: —</span>
         <label class="file">Загрузить WAV<input id="file" type="file" accept=".wav,audio/wav" disabled></label>
       </div>
     </section>
     <footer>Учебный сценарий: запись на приём не создаётся, цены и расписание не подключены.
-      Аудио и сообщения обрабатываются Alem. Используйте вымышленные обращения.
+      Подтверждённое обращение на обратный звонок сохраняется как задача в CRM; используйте вымышленные данные.
+      Аудио обрабатывается Alem, сообщения — выбранным провайдером модели. Используйте вымышленные обращения.
       Озвучивание — голосом браузера; доступные голоса зависят от устройства.
+      Замер до голоса не включает время записи; STT и OpenAI показывают время обработки на сервере.
       Голоса с пометкой «онлайн» могут передавать текст сервису озвучивания.</footer>
   </main>
 </body>

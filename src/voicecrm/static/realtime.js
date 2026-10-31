@@ -20,6 +20,8 @@ async function refresh() {
     if (!response.ok) throw new Error();
     config = await response.json();
     el('connection').textContent = `${config.model} · ${config.voice}`;
+    el('vad').textContent = Number.isFinite(config.silence_duration_ms)
+      ? `Пауза завершения речи: ${config.silence_duration_ms} мс` : 'Пауза завершения речи: —';
     el('setup').hidden = config.configured;
     status(config.configured ? 'Готово к подключению. Нажмите «Начать разговор».' : 'Нужен ключ OpenAI API. Живое подключение ещё не проверено.');
   } catch {
@@ -74,7 +76,9 @@ function render(event, call) {
   } else if (event.type === 'status') {
     status(call.muted ? 'Микрофон выключен. Помощник может закончить ответ.' : event.text);
   } else if (event.type === 'latency') {
-    el('latency').textContent = `Отклик сервиса: ≈ ${(event.milliseconds / 1000).toFixed(2)} с`;
+    const seconds = value => value === null ? '—' : `${(value / 1000).toFixed(2)} с`;
+    el('latency').textContent = `Последний отклик сервиса: ${seconds(event.milliseconds)}`;
+    el('latency-summary').textContent = `Ответов: ${event.count} · медиана: ${seconds(event.medianMilliseconds)} · p95: ${seconds(event.p95Milliseconds)}`;
   } else if (event.type === 'usage') {
     el('usage').textContent = `Расход токенов: ${event.totalTokens} · без расчёта стоимости`;
   } else if (event.type === 'error') status(event.text, true);
@@ -100,7 +104,9 @@ async function start() {
     if (current !== call) { stream.getTracks().forEach(track => track.stop()); return; }
     call.stream = stream;
     el('messages').replaceChildren(); bubbles.clear();
-    el('latency').textContent = 'Отклик сервиса: —'; el('usage').textContent = 'Расход токенов: —'; el('timer').textContent = '';
+    el('latency').textContent = 'Последний отклик сервиса: —';
+    el('latency-summary').textContent = 'Ответов: 0 · медиана: — · p95: —';
+    el('usage').textContent = 'Расход токенов: —'; el('timer').textContent = '';
     for (const track of stream.getAudioTracks()) {
       track.enabled = false;
       track.onended = () => { if (current === call) stop('Микрофон отключился. Разговор завершён.', true); };

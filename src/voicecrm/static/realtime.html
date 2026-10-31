@@ -9,7 +9,7 @@
 </head>
 <body>
   <main>
-    <header><span class="brand">VOICECRM <span class="badge">REALTIME</span></span><a href="/">Сравнить с Alem →</a></header>
+    <header><span class="brand">VOICECRM <span class="badge">REALTIME</span></span><a href="/voice">Обычный диалог →</a><a href="/">EspoCRM →</a></header>
     <section class="intro"><p class="eyebrow">ТЕСТОВАЯ СТОМАТОЛОГИЯ · OPENAI</p>
       <h1>Просто начните говорить.</h1>
       <p>Помощник слышит вашу речь и отвечает голосом. Делайте паузы между репликами; его можно перебить.</p>
@@ -30,10 +30,16 @@
       </div>
       <div class="audio-panel"><audio id="remote-audio" autoplay controls aria-label="Голос OpenAI"></audio>
         <button id="play" class="secondary" hidden>Включить звук</button></div>
-      <div class="rt-metrics"><span id="latency">Отклик сервиса: —</span><span id="usage">Расход токенов: —</span></div>
+      <div class="rt-metrics">
+        <span id="latency">Последний отклик сервиса: —</span>
+        <span id="latency-summary">Ответов: 0 · медиана: — · p95: —</span>
+        <span id="vad">Пауза завершения речи: —</span>
+        <span id="usage">Расход токенов: —</span>
+      </div>
       <div id="messages" role="log" aria-label="Переписка" aria-live="polite"><p id="empty">Например: «Хочу записаться на чистку в пятницу после трёх».</p></div>
-      <p class="rt-note">Отклик сервиса измеряется от обнаружения конца реплики до начала выдачи аудио.
-        Пауза определения конца речи (0,5 с) и задержка воспроизведения не включены.
+      <p class="rt-note">Отклик сервиса измеряется между получением уведомлений о конце реплики и начале аудио OpenAI.
+        Пауза завершения речи и задержка воспроизведения не включены: это не время до первого звука в динамиках.
+        Статистика относится к текущему разговору; прерванные и ошибочные ответы исключаются. При малом числе ответов p95 предварительный.
         Текст может появиться позже голоса; прерванный ответ мог прозвучать не полностью.</p>
     </section>
     <footer>Вы разговариваете с ИИ. Микрофон передаётся напрямую OpenAI только во время подключения.

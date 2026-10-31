@@ -1,4 +1,4 @@
-"""Manual live Qwen check using fictional requests; may incur API charges."""
+"""Manual live dialogue check using fictional requests; may incur API charges."""
 
 import json
 
@@ -10,8 +10,10 @@ from voicecrm.main import create_app
 
 def main():
     settings = Settings()
-    if settings.llm_mode != "qwen":
-        raise SystemExit("Для проверки диалога нужен LLM_MODE=qwen.")
+    if settings.llm_mode != "openai":
+        raise SystemExit("Для проверки диалога нужен LLM_MODE=openai.")
+    if not settings.openai_api_key.get_secret_value():
+        raise SystemExit("Добавьте OPENAI_API_KEY в локальный .env")
     scenarios = [
         ["Здравствуйте, хочу записаться завтра после трёх.",
          "На профессиональную чистку. Сколько стоит?",

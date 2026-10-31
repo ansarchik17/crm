@@ -1,14 +1,9 @@
-import asyncio
-import json
-
-import httpx
 import pytest
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
 
 from voicecrm.config import Settings
 from voicecrm.main import create_app
-from voicecrm.dialogue.llm import QwenModel
 from voicecrm.errors import ProviderError
 
 
@@ -18,13 +13,25 @@ def settings(**kwargs):
 
 def test_voice_page_and_assets_are_available_without_exposing_configuration():
     with TestClient(create_app(settings(llm_mode="demo"))) as client:
-        response = client.get("/")
+        response = client.get("/voice")
         assert response.status_code == 200
         assert "Тестовая стоматология" in response.text
         for asset in ("app.js", "wav.js", "recorder.js", "style.css"):
             assert client.get(f"/static/{asset}").status_code == 200
         assert client.get("/static/.env").status_code == 404
         assert client.get("/health").json()["tts_connected"] is False
+
+
+def test_primary_page_redirects_to_espocrm_and_health_does_not_claim_live_connection():
+    with TestClient(create_app(settings(espocrm_api_key="test-secret"))) as client:
+        response = client.get("/", follow_redirects=False)
+        assert response.status_code == 307
+        assert response.headers["location"] == "http://127.0.0.1:8080"
+        health = client.get("/health").json()
+        assert health["crm_provider"] == "espocrm"
+        assert health["crm_configured"] is True
+        assert health["crm_connected"] is None
+        assert "test-secret" not in str(health)
 
 
 class RecordingModel:
@@ -76,41 +83,7 @@ def test_input_and_history_are_bounded():
         assert client.get("/health").json()["telephony_connected"] is False
 
 
-def test_qwen_requires_explicit_configuration():
-    with pytest.raises(ValidationError):
-        settings(llm_mode="qwen", qwen_api_key="", qwen_base_url="", qwen_model="")
-
-
-@pytest.mark.parametrize("kind", ["success", "unauthorized", "malformed", "timeout"])
-@pytest.mark.parametrize("thinking", [None, False, True])
-def test_qwen_contract_and_failures(kind, thinking):
-    config = settings(llm_mode="qwen", qwen_api_key="test-secret", qwen_model="test-model",
-                      qwen_base_url="https://provider.example/v1", qwen_enable_thinking=thinking)
-
-    def handle(request):
-        assert str(request.url) == "https://provider.example/v1/chat/completions"
-        payload = json.loads(request.content)
-        if thinking is None:
-            assert "chat_template_kwargs" not in payload
-        else:
-            assert payload["chat_template_kwargs"] == {"enable_thinking": thinking}
-        assert payload["messages"][0]["role"] == "system"
-        assert payload["messages"][1]["content"] == "Привет"
-        assert request.headers["Authorization"] == "Bearer test-secret"
-        if kind == "timeout":
-            raise httpx.ReadTimeout("secret", request=request)
-        if kind == "unauthorized":
-            return httpx.Response(401, text="test-secret")
-        if kind == "malformed":
-            return httpx.Response(200, json={"choices": []})
-        return httpx.Response(200, json={"choices": [{"message": {"content": "Здравствуйте"}}]})
-
-    async def run():
-        async with httpx.AsyncClient(transport=httpx.MockTransport(handle)) as client:
-            provider = QwenModel(config, client)
-            if kind == "success":
-                assert await provider.reply([{"role": "user", "content": "Привет"}]) == "Здравствуйте"
-            else:
-                with pytest.raises(ProviderError, match="Language model unavailable"):
-                    await provider.reply([{"role": "user", "content": "Привет"}])
-    asyncio.run(run())
+def test_removed_provider_mode_is_rejected():
+    with pytest.raises(ValidationError) as error:
+        settings(llm_mode="qwen")
+    assert error.value.errors()[0]["loc"] == ("llm_mode",)

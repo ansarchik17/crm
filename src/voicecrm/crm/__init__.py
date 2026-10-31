@@ -1,8 +1,8 @@
-"""CRM module: delivery of call outcomes to the customer's CRM.
+"""EspoCRM is the CRM system of record; voice tools use its server-only adapter.
 
-Status: not started; the target CRM is not chosen yet (docs/ROADMAP.md, stage 6).
-Planned responsibilities:
-- minimal payload per call: call_id, contact, topic, responsible employee, outcome, recording link, next steps;
-- outbox with retries and an idempotency key per (company, event) so redelivery never duplicates leads;
-- writes happen only after the system confirms an action, never on the model's claim alone.
+Current adapter: read contacts by phone, verify reachability, create Calls/Tasks
+through typed server methods. Callback tools prepare immutable local drafts;
+explicit local confirmation dispatches at most one POST per durable operation.
+Unknown writes are reconciled by GET. Automatic delivery/outbox and confirmed
+appointment booking are still future work.
 """

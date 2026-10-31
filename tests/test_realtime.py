@@ -6,6 +6,7 @@ from email.policy import default
 import httpx
 import pytest
 from fastapi.testclient import TestClient
+from pydantic import ValidationError
 
 from voicecrm.config import Settings
 from voicecrm.main import create_app
@@ -23,6 +24,7 @@ def test_realtime_config_missing_key_and_page_do_not_require_alem():
         assert client.get("/realtime").status_code == 200
         config = client.get("/realtime/config").json()
         assert config["configured"] is False
+        assert config["silence_duration_ms"] == 300
         assert config["test_duration_seconds"] == 300
         response = client.post("/realtime/calls", content=SDP, headers={"Content-Type": "application/sdp"})
         assert response.status_code == 503
@@ -46,6 +48,7 @@ def test_realtime_gateway_contract_and_sanitized_errors(kind):
         assert session["type"] == "realtime"
         assert session["output_modalities"] == ["audio"]
         assert session["reasoning"]["effort"] == "minimal"
+        assert session["audio"]["input"]["turn_detection"]["silence_duration_ms"] == 300
         assert session["audio"]["input"]["turn_detection"]["interrupt_response"] is True
         assert "стоматологии" in session["instructions"]
         if kind == "timeout":
@@ -64,6 +67,40 @@ def test_realtime_gateway_contract_and_sanitized_errors(kind):
                 assert "test-secret" not in str(error.value)
                 assert error.value.status == (504 if kind == "timeout" else 503 if kind == "quota" else 502)
     asyncio.run(run())
+
+
+@pytest.mark.parametrize("silence_ms", [300, 500])
+def test_realtime_silence_env_setting_reaches_public_config_and_openai(monkeypatch, silence_ms):
+    monkeypatch.setenv("OPENAI_REALTIME_SILENCE_MS", str(silence_ms))
+    config = settings(openai_api_key="test-secret")
+
+    with TestClient(create_app(config, realtime=FakeGateway())) as client:
+        assert client.get("/realtime/config").json()["silence_duration_ms"] == silence_ms
+
+    def handle(request):
+        message = BytesParser(policy=default).parsebytes(
+            ("Content-Type: " + request.headers["Content-Type"] + "\r\n\r\n").encode() + request.content)
+        fields = {part.get_param("name", header="content-disposition"): part.get_payload(decode=True)
+                  for part in message.iter_parts()}
+        session = json.loads(fields["session"])
+        assert fields["sdp"].decode() == SDP
+        assert session["audio"]["input"]["turn_detection"]["silence_duration_ms"] == silence_ms
+        assert session["reasoning"]["effort"] == "minimal"
+        return httpx.Response(201, text=SDP)
+
+    async def run():
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handle)) as client:
+            assert await RealtimeGateway(config, client).create_call(SDP) == SDP
+
+    asyncio.run(run())
+
+
+@pytest.mark.parametrize("silence_ms", [99, 1001])
+def test_realtime_silence_setting_rejects_values_outside_prototype_bounds(monkeypatch, silence_ms):
+    monkeypatch.setenv("OPENAI_REALTIME_SILENCE_MS", str(silence_ms))
+    with pytest.raises(ValidationError) as error:
+        settings()
+    assert error.value.errors()[0]["loc"] == ("openai_realtime_silence_ms",)
 
 
 class FakeGateway:

@@ -8,3 +8,7 @@ __pycache__/
 data/
 recordings/
 .DS_Store
+# Official EspoCRM release exported from the pinned image; runtime data excluded.
+/espocrm/
+/upstream/
+/runtime/

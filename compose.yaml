@@ -1,0 +1,99 @@
+name: voicecrm-espo
+
+x-espo-image: &espo-image espocrm/espocrm:10.0.9
+x-espo-volumes: &espo-volumes
+  - espo-data:/var/www/html/data
+  - espo-custom:/var/www/html/custom
+  - espo-custom-client:/var/www/html/client/custom
+x-espo-config: &espo-config
+  ESPOCRM_CONFIG_USE_WEB_SOCKET: "true"
+  ESPOCRM_CONFIG_WEB_SOCKET_URL: "ws://localhost:8083"
+  ESPOCRM_CONFIG_WEB_SOCKET_ZERO_M_Q_SUBSCRIBER_DSN: "tcp://*:7777"
+  ESPOCRM_CONFIG_WEB_SOCKET_ZERO_M_Q_SUBMISSION_DSN: "tcp://espocrm-websocket:7777"
+
+services:
+  espocrm-db:
+    image: mariadb:11.4
+    restart: unless-stopped
+    environment:
+      MARIADB_DATABASE: espocrm
+      MARIADB_USER: espocrm
+      MARIADB_PASSWORD_FILE: /run/secrets/espo_db_password
+      MARIADB_ROOT_PASSWORD_FILE: /run/secrets/espo_db_root_password
+    secrets:
+      - espo_db_password
+      - espo_db_root_password
+    volumes:
+      - espo-db:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      start_period: 20s
+      retries: 12
+
+  espocrm:
+    image: *espo-image
+    restart: unless-stopped
+    environment:
+      <<: *espo-config
+      ESPOCRM_DATABASE_PLATFORM: Mysql
+      ESPOCRM_DATABASE_HOST: espocrm-db
+      ESPOCRM_DATABASE_NAME: espocrm
+      ESPOCRM_DATABASE_USER: espocrm
+      ESPOCRM_DATABASE_PASSWORD_FILE: /run/secrets/espo_db_password
+      ESPOCRM_ADMIN_USERNAME: admin
+      ESPOCRM_ADMIN_PASSWORD_FILE: /run/secrets/espo_admin_password
+      ESPOCRM_SITE_URL: "http://localhost:8080"
+      ESPOCRM_CONFIG_LANGUAGE: ru_RU
+    secrets:
+      - espo_db_password
+      - espo_admin_password
+    volumes: *espo-volumes
+    ports:
+      - "127.0.0.1:8080:80"
+    depends_on:
+      espocrm-db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "bin/command", "app-check"]
+      interval: 15s
+      timeout: 10s
+      start_period: 60s
+      retries: 20
+
+  espocrm-daemon:
+    image: *espo-image
+    restart: unless-stopped
+    entrypoint: docker-daemon.sh
+    environment: *espo-config
+    volumes: *espo-volumes
+    depends_on:
+      espocrm:
+        condition: service_healthy
+
+  espocrm-websocket:
+    image: *espo-image
+    restart: unless-stopped
+    entrypoint: docker-websocket.sh
+    environment: *espo-config
+    volumes: *espo-volumes
+    ports:
+      - "127.0.0.1:8083:8080"
+    depends_on:
+      espocrm:
+        condition: service_healthy
+
+volumes:
+  espo-db:
+  espo-data:
+  espo-custom:
+  espo-custom-client:
+
+secrets:
+  espo_db_password:
+    file: ./runtime/secrets/espo_db_password
+  espo_db_root_password:
+    file: ./runtime/secrets/espo_db_root_password
+  espo_admin_password:
+    file: ./runtime/secrets/espo_admin_password
