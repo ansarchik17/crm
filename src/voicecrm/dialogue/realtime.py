@@ -34,8 +34,9 @@ def session_config(settings: Settings) -> dict:
                                    "prefix_padding_ms": 300,
                                    "silence_duration_ms": settings.openai_realtime_silence_ms,
                                    "create_response": True, "interrupt_response": True},
-                # Only for on-screen captions; the voice model consumes audio directly.
-                "transcription": {"model": "gpt-transcribe", "language": "ru"},
+                # GA WebRTC input captions; gpt-transcribe's committed-turn path
+                # requires WebSocket. The voice model consumes audio directly.
+                "transcription": {"model": "gpt-realtime-whisper", "language": "ru"},
             },
             "output": {"voice": settings.openai_realtime_voice},
         },

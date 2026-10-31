@@ -50,6 +50,11 @@ def test_realtime_gateway_contract_and_sanitized_errors(kind):
         assert session["reasoning"]["effort"] == "minimal"
         assert session["audio"]["input"]["turn_detection"]["silence_duration_ms"] == 300
         assert session["audio"]["input"]["turn_detection"]["interrupt_response"] is True
+        # gpt-transcribe's committed-turn workflow is WebSocket-only. Captions
+        # in this GA WebRTC conversation must use its supported streaming model.
+        assert session["audio"]["input"]["transcription"] == {
+            "model": "gpt-realtime-whisper", "language": "ru",
+        }
         assert "стоматологии" in session["instructions"]
         if kind == "timeout":
             raise httpx.ReadTimeout("test-secret", request=request)

@@ -54,9 +54,12 @@ API тарифицируется отдельно; наличие ключа н�
   события, расшифровку и статистику. Никакого ожидания полного WAV-файла нет.
 - Настроен `server_vad`, `create_response=true`, `interrupt_response=true`.
   При перебивании очисткой звукового буфера управляет OpenAI WebRTC.
-- Входная расшифровка `gpt-transcribe` работает асинхронно только для экрана;
+- Входная расшифровка `gpt-realtime-whisper` работает асинхронно только для экрана;
   модель слышит аудио напрямую. Расшифровка может отличаться от воспринятой речи
   и добавляет отдельную обработку/расход. Её завершения ответ не ждёт.
+  `gpt-transcribe` для этой WebRTC-конфигурации не используется: его сценарий
+  committed turn требует WebSocket. Выбранная модель перечислена в GA calls API;
+  совместимость всего сеанса всё равно проверяется живым подключением.
 - Ответы озвучивает OpenAI голосом `marin`. Лимит — 1024 выходных токена на ответ.
 - Настройки `/realtime/config` показывают наличие ключа, модель, голос и VAD-паузу;
   endpoint не выполняет живую проверку доступа.
@@ -111,6 +114,14 @@ Realtime ещё не завершена.** Обычная текстовая м�
 дали HTTP 200 на тестовом WAV; это не проверяет браузерный звук Realtime.
 Наличие ключа само по себе не подтверждает доступ к Realtime-модели.
 
+31 октября 2026 стенд восстановлен, но первая живая проверка подключения
+получила OpenAI HTTP 401 с кодом `invalid_api_key`; WebRTC-сеанс не создан,
+аудио не передавалось. Нужно обновить `OPENAI_API_KEY` локально в `.env` и
+перезапустить голосовой сервер. Значение ключа в чат и Git не передаётся.
+После проверки официальной схемы входные субтитры переведены на
+`gpt-realtime-whisper`; тест проверяет эту конфигурацию в реальном multipart.
+Эта офлайн-проверка не подтверждает доступ аккаунта или качество звука.
+
 Официальные источники:
 
 - https://developers.openai.com/api/docs/guides/realtime
@@ -118,3 +129,5 @@ Realtime ещё не завершена.** Обычная текстовая м�
 - https://developers.openai.com/api/docs/guides/realtime-conversations
 - https://developers.openai.com/api/docs/guides/realtime-vad
 - https://developers.openai.com/api/reference/resources/realtime/subresources/calls/methods/create
+- https://developers.openai.com/api/docs/guides/realtime-transcription
+- https://developers.openai.com/api/docs/models/gpt-realtime-whisper
